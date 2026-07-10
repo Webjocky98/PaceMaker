@@ -69,29 +69,7 @@ function formatSessionSummaryShort(s){
   if(!s.completed) return `${s.role} missed`;
   return `${s.role}${s.distanceKm ? ` · ${s.distanceKm}k` : ''}`;
 }
-function renderUpcomingEvents(){
-  const upcoming = getUpcomingEvents();
-  if(!upcoming.length){
-    return `<div class="empty">No upcoming events added yet.</div>`;
-  }
 
-  return upcoming.map(e => {
-    const dist = eventDistanceKm(e);
-    const hm = secondsToHoursMinutes(e.goalSeconds || 0);
-    return `
-      <div class="log-row" style="cursor:pointer;" onclick="openEventModal('${e.id}')">
-        <div>
-          <span class="log-role" style="background:${e.priority==='A' ? 'rgba(215,38,61,.22)' : e.priority==='B' ? 'rgba(255,179,0,.18)' : 'rgba(255,255,255,.08)'};color:${e.priority==='A' ? '#ff9cab' : e.priority==='B' ? 'var(--amber)' : 'var(--chalk-dim)'}">${escapeHtml(e.priority)}</span>
-          <span style="margin-left:8px;">${escapeHtml(e.name)}</span>
-          <div class="hint" style="margin-top:4px;">
-            ${dist ? `${dist}km` : ''}${e.goalSeconds ? ` · target ${hm.hours}h ${hm.minutes}m` : ''} · ${escapeHtml(e.date)}
-          </div>
-        </div>
-        <div class="log-meta">View</div>
-      </div>
-    `;
-  }).join('');
-}
 function renderStrengthInputs(existing){
   const data = existing && Array.isArray(existing.exercises) && existing.exercises.length
     ? existing.exercises
@@ -241,9 +219,36 @@ function renderChatThread(){
   `).join('');
 }
 
+function renderUpcomingEvents(){
+  const upcoming = getUpcomingEvents();
+
+  if(!upcoming.length){
+    return `<div class="empty">No upcoming events added yet.</div>`;
+  }
+
+  return upcoming.map(e => {
+    const dist = eventDistanceKm(e);
+    const hm = secondsToHoursMinutes(e.goalSeconds || 0);
+
+    return `
+      <div class="log-row" style="cursor:pointer;" onclick="openEventModal('${e.id}')">
+        <div>
+          <span class="log-role" style="background:${e.priority==='A' ? 'rgba(215,38,61,.22)' : e.priority==='B' ? 'rgba(255,179,0,.18)' : 'rgba(255,255,255,.08)'};color:${e.priority==='A' ? '#ff9cab' : e.priority==='B' ? 'var(--amber)' : 'var(--chalk-dim)'}">${escapeHtml(e.priority)}</span>
+          <span style="margin-left:8px;">${escapeHtml(e.name)}</span>
+          <div class="hint" style="margin-top:4px;">
+            ${dist ? `${dist}km` : ''}${e.goalSeconds ? ` · target ${hm.hours}h ${hm.minutes}m` : ''} · ${escapeHtml(e.date)}
+          </div>
+        </div>
+        <div class="log-meta">View</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderCalendarMonths(){
   const start = startOfMonth(toDate(profile.startDate));
-  const end = startOfMonth(toDate(profile.londonDate));
+  const endEvent = getUpcomingEvents().length ? getUpcomingEvents()[getUpcomingEvents().length - 1] : null;
+  const end = endEvent ? startOfMonth(toDate(endEvent.date)) : startOfMonth(addMonths(new Date(), 6));
   const current = currentCalendarMonth();
 
   const atStart = current.getFullYear()===start.getFullYear() && current.getMonth()===start.getMonth();
@@ -348,16 +353,22 @@ function render(){
   const b = phaseBoundaries();
 
   let warn = '';
-  if(toDate(profile.copenhagenDate) <= toDate(profile.startDate) || toDate(profile.londonDate) <= toDate(profile.copenhagenDate)){
-    warn = `<div class="banner">Your race dates don't line up correctly. Fix them in Settings so the plan can regenerate properly.</div>`;
+  if(getUpcomingEvents().length === 0){
+    warn = `<div class="banner">You have no events set up yet. Add an event to build a targeted plan.</div>`;
   }
 
-  const daysToCph = daysBetween(today, b.cph);
-  const daysToLdn = daysBetween(today, b.ldn);
-  const cphPast = daysToCph < 0;
+  const nextEvent = getNextEvent(today);
+  const primaryEvent = getPrimaryEvent(today);
+
+  const daysToNext = nextEvent ? daysBetween(today, toDate(nextEvent.date)) : null;
+  const daysToPrimary = primaryEvent ? daysBetween(today, toDate(primaryEvent.date)) : null;
 
   const ph = phaseForDate(today);
-  const meta = PHASE_META[ph.key] || {name:ph.key, desc:''};
+  const phaseMetaKey = ph.key === 'build'
+    ? ((b.distanceKm || KM_MARATHON) <= KM_HALF ? 'halfbuild' : 'marathonbuild')
+    : ph.key;
+
+  const meta = PHASE_META[phaseMetaKey] || PHASE_META[ph.key] || {name:ph.key, desc:''};
 
   const todayPlan = fullDayPlan(today);
   const todayRun = todayPlan.run;
@@ -408,15 +419,15 @@ function render(){
 
     <div class="board">
       <div class="board-row">
-        <div class="clock ${cphPast?'past':''}">
-          <div class="clock-label">${cphPast?'Copenhagen Half — done':'Days to Copenhagen Half'}</div>
-          <div class="clock-digits mono">${cphPast ? '✓' : String(Math.max(daysToCph,0)).padStart(3,'0')}</div>
-          <div class="clock-sub">${fmtDateHuman(b.cph)} · goal ${fmtHMS(profile.copenhagenGoal)}</div>
+        <div class="clock ${nextEvent && daysToNext < 0 ? 'past' : ''}">
+          <div class="clock-label">${nextEvent ? 'Days to next event' : 'Next event'}</div>
+          <div class="clock-digits mono">${nextEvent ? String(Math.max(daysToNext,0)).padStart(3,'0') : '---'}</div>
+          <div class="clock-sub">${nextEvent ? `${escapeHtml(nextEvent.name)} · ${fmtDateHuman(toDate(nextEvent.date))}` : 'No event scheduled'}</div>
         </div>
         <div class="clock">
-          <div class="clock-label">Days to London Marathon</div>
-          <div class="clock-digits mono">${String(Math.max(daysToLdn,0)).padStart(3,'0')}</div>
-          <div class="clock-sub">${fmtDateHuman(b.ldn)} · goal ${fmtHMS(profile.goalMarathonSeconds)}</div>
+          <div class="clock-label">${primaryEvent ? 'Days to primary goal' : 'Primary goal'}</div>
+          <div class="clock-digits mono">${primaryEvent ? String(Math.max(daysToPrimary,0)).padStart(3,'0') : '---'}</div>
+          <div class="clock-sub">${primaryEvent ? `${escapeHtml(primaryEvent.name)} · ${fmtDateHuman(toDate(primaryEvent.date))}` : 'No primary event selected'}</div>
         </div>
       </div>
       <div class="phase-strip">
@@ -425,6 +436,16 @@ function render(){
           <div class="phase-name">${escapeHtml(meta.name)} — week ${ph.idx}</div>
           <div class="phase-desc">${escapeHtml(meta.desc)}</div>
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Upcoming events</h2>
+      <div class="btn-row">
+        <button class="btn secondary" onclick="openEventEditor()">Add event</button>
+      </div>
+      <div style="margin-top:10px;">
+        ${renderUpcomingEvents()}
       </div>
     </div>
 
@@ -500,11 +521,11 @@ function render(){
 
     <div class="card">
       <h2>Plan calendar</h2>
-      <div class="hint" style="margin-bottom:10px;">Month-by-month view of your runs and gym sessions up to London.</div>
+      <div class="hint" style="margin-bottom:10px;">Month-by-month view of your runs and gym sessions.</div>
       ${renderCalendarMonths()}
     </div>
 
-    <footer>Built for your journey to sub-4:00 in London. Plans adapt weekly based on what you log.</footer>
+    <footer>Built for flexible event-based training. Plans adapt weekly based on what you log.</footer>
   `;
 
   const cached = loadLocal(KEYS.coach);
