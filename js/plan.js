@@ -21,18 +21,51 @@ function estimate5kSeconds(){
   return riegel(profile.priorMarathonSeconds, KM_MARATHON, KM_5K) * buffer;
 }
 
+function getUpcomingEvents(fromDate){
+  const from = fromDate || toDate(todayISO());
+  return [...events]
+    .filter(e => e.status !== 'cancelled' && toDate(e.date) >= from)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function getPrimaryEvent(fromDate){
+  const upcoming = getUpcomingEvents(fromDate);
+  if(!upcoming.length) return null;
+
+  const aPriority = upcoming.find(e => e.priority === 'A');
+  if(aPriority) return aPriority;
+
+  const bPriority = upcoming.find(e => e.priority === 'B');
+  if(bPriority) return bPriority;
+
+  return upcoming[0];
+}
+
+function getNextEvent(fromDate){
+  const upcoming = getUpcomingEvents(fromDate);
+  return upcoming.length ? upcoming[0] : null;
+}
+
+function goalSecondsForPrimaryEvent(){
+  const primary = getPrimaryEvent();
+  if(!primary || !primary.goalSeconds) return 4 * 3600;
+  return primary.goalSeconds;
+}
+
 function paceZones(){
   const t5k = estimate5kSeconds();
   const p5k = t5k / KM_5K;
-  const goalMPace = profile.goalMarathonSeconds / KM_MARATHON;
+  const primary = getPrimaryEvent();
+  const primaryDistance = primary ? (eventDistanceKm(primary) || KM_MARATHON) : KM_MARATHON;
+  const goalRacePace = goalSecondsForPrimaryEvent() / primaryDistance;
 
   return {
-    easy: p5k*1.28,
-    long: p5k*1.30,
-    steady: (p5k*1.28 + p5k*1.07)/2,
-    threshold: p5k*1.07,
-    interval: p5k*1.00,
-    marathonGoal: goalMPace
+    easy: p5k * 1.28,
+    long: p5k * 1.30,
+    steady: (p5k * 1.28 + p5k * 1.07) / 2,
+    threshold: p5k * 1.07,
+    interval: p5k * 1.00,
+    goalRace: goalRacePace
   };
 }
 
@@ -58,41 +91,86 @@ function suggestedHalfGoalSeconds(){
   return riegel(profile.priorMarathonSeconds, KM_MARATHON, KM_HALF) * 1.05;
 }
 
+function primaryEventDistanceKm(){
+  const primary = getPrimaryEvent();
+  return primary ? (eventDistanceKm(primary) || KM_MARATHON) : KM_MARATHON;
+}
+
 function phaseBoundaries(){
   const start = mondayOf(toDate(profile.startDate));
-  const cph = toDate(profile.copenhagenDate);
-  const ldn = toDate(profile.londonDate);
-  const halfBuildStart = mondayOf(addWeeks(cph,-8));
-  const recoveryStart = mondayOf(addDays(cph,1));
-  let marathonBaseStart = mondayOf(addWeeks(recoveryStart,2));
-  const taperStart = mondayOf(addWeeks(ldn,-3));
-  let buildStart = mondayOf(addWeeks(taperStart,-13));
+  const primary = getPrimaryEvent(start);
 
-  if(buildStart < marathonBaseStart) buildStart = marathonBaseStart;
+  if(!primary){
+    const fallback = addWeeks(start, 24);
+    return {
+      start,
+      primaryEvent: null,
+      targetDate: fallback,
+      distanceKm: KM_MARATHON,
+      baseStart: start,
+      buildStart: addWeeks(fallback, -13),
+      taperStart: addWeeks(fallback, -3),
+      recoveryStart: addDays(fallback, 1)
+    };
+  }
+
+  const targetDate = toDate(primary.date);
+  const distanceKm = eventDistanceKm(primary) || KM_MARATHON;
+
+  let baseStart;
+  let buildStart;
+  let taperStart;
+
+  if(distanceKm <= 10){
+    baseStart = mondayOf(addWeeks(targetDate, -8));
+    buildStart = baseStart;
+    taperStart = mondayOf(addWeeks(targetDate, -1));
+  } else if(distanceKm <= KM_HALF){
+    baseStart = mondayOf(addWeeks(targetDate, -10));
+    buildStart = mondayOf(addWeeks(targetDate, -8));
+    taperStart = mondayOf(addWeeks(targetDate, -2));
+  } else {
+    baseStart = mondayOf(addWeeks(targetDate, -20));
+    buildStart = mondayOf(addWeeks(targetDate, -13));
+    taperStart = mondayOf(addWeeks(targetDate, -3));
+  }
+
+  const recoveryStart = mondayOf(addDays(targetDate, 1));
 
   return {
     start,
-    cph,
-    ldn,
-    halfBuildStart,
-    recoveryStart,
-    marathonBaseStart,
+    primaryEvent: primary,
+    targetDate,
+    distanceKm,
+    baseStart,
     buildStart,
-    taperStart
+    taperStart,
+    recoveryStart
   };
 }
 
 function phaseForDate(d){
   const b = phaseBoundaries();
 
-  if(d > b.ldn) return {key:'done', idx:0, b};
-  if(d < b.halfBuildStart) return {key:'base', idx:Math.floor(daysBetween(b.start,d)/7)+1, b};
-  if(d < b.recoveryStart) return {key:'halfbuild', idx:Math.min(8,Math.floor(daysBetween(b.halfBuildStart,d)/7)+1), b};
-  if(d < b.marathonBaseStart) return {key:'recovery', idx:Math.floor(daysBetween(b.recoveryStart,d)/7)+1, b};
-  if(d < b.buildStart) return {key:'marathonbase', idx:Math.floor(daysBetween(b.marathonBaseStart,d)/7)+1, b};
-  if(d < b.taperStart) return {key:'marathonbuild', idx:Math.min(13,Math.floor(daysBetween(b.buildStart,d)/7)+1), b};
+  if(d > b.targetDate) return {key:'done', idx:0, b};
 
-  return {key:'taper', idx:Math.min(3,Math.floor(daysBetween(b.taperStart,d)/7)+1), b};
+  if(d < b.baseStart){
+    return {key:'base', idx:Math.floor(daysBetween(b.start,d)/7)+1, b};
+  }
+
+  if(d < b.buildStart){
+    return {key:'base', idx:Math.floor(daysBetween(b.baseStart,d)/7)+1, b};
+  }
+
+  if(d < b.taperStart){
+    return {key:'build', idx:Math.floor(daysBetween(b.buildStart,d)/7)+1, b};
+  }
+
+  if(d <= b.targetDate){
+    return {key:'taper', idx:Math.floor(daysBetween(b.taperStart,d)/7)+1, b};
+  }
+
+  return {key:'done', idx:0, b};
 }
 
 function sortedTrainingDays(){
@@ -123,14 +201,19 @@ function hasStrengthDay(date){
   return profile.strengthDays.includes(date.getDay());
 }
 
-function baseWeekSession(role, idx){
+function baseWeekSession(role, idx, targetDistanceKm){
   const lm = profile.loadMultiplier;
   const cutback = idx>1 && idx%4===0;
   const cb = cutback ? 0.82 : 1;
 
-  const easyKm = roundKm(Math.min(4 + (idx-1)*0.8, 8) * lm * cb);
-  const steadyKm = roundKm(Math.min(5 + (idx-1)*0.8, 9) * lm * cb);
-  const longKm = roundKm(Math.min(6 + (idx-1)*1.4, 14) * lm * cb);
+  const isMarathon = targetDistanceKm >= KM_MARATHON - 1;
+  const easyCap = isMarathon ? 9 : 8;
+  const steadyCap = isMarathon ? 11 : 9;
+  const longCap = targetDistanceKm <= 10 ? 12 : targetDistanceKm <= KM_HALF ? 18 : 24;
+
+  const easyKm = roundKm(Math.min(4 + (idx-1)*0.8, easyCap) * lm * cb);
+  const steadyKm = roundKm(Math.min(5 + (idx-1)*0.8, steadyCap) * lm * cb);
+  const longKm = roundKm(Math.min(6 + (idx-1)*1.5, longCap) * lm * cb);
 
   if(role==='quality') return {
     title: cutback ? 'Easy run + strides (cutback)' : 'Easy run + strides',
@@ -197,93 +280,72 @@ function halfBuildSession(role, idx){
   };
 }
 
-function recoverySession(role, idx){
-  const lm = Math.min(profile.loadMultiplier, 1.0);
-  const easyKm = roundKm((4 + Math.min(idx,2)) * lm);
-
-  if(role==='long') return {
-    title:'Gentle longer run',
-    km:roundKm((6 + idx) * lm),
-    detail:'Keep this properly easy. The goal is freshening up after the half marathon.'
-  };
-
-  if(role==='quality') return {
-    title:'Easy run + strides',
-    km:easyKm,
-    detail:'No real quality this phase — just easy running and 4–5 relaxed strides.'
-  };
-
-  if(role==='steady') return {
-    title:'Easy steady run',
-    km:roundKm((5 + idx) * lm),
-    detail:'Stay controlled. This should feel smooth, not taxing.'
-  };
-
-  return {
-    title:'Recovery jog',
-    km:easyKm,
-    detail:'Very easy. Finish feeling better than when you started.'
-  };
-}
-
-function marathonBaseSession(role, idx){
+function tenKBuildSession(role, idx){
   const lm = profile.loadMultiplier;
-  const cutback = idx%4===0;
-  const cb = cutback ? 0.78 : 1;
+  const cutback = idx>1 && idx%4===0;
+  const cb = cutback ? 0.82 : 1;
 
-  const longKm = Math.min(10+(idx-1)*1.7, 20) * cb * lm;
-  const easyKm = Math.min(6+(idx-1)*0.5, 9) * cb * lm;
-  const steadyKm = Math.min(7+(idx-1)*0.5, 11) * cb * lm;
+  const easyKm = roundKm(Math.min(5 + (idx-1)*0.7, 8) * lm * cb);
+  const steadyKm = roundKm(Math.min(6 + (idx-1)*0.7, 10) * lm * cb);
+  const longKm = roundKm(Math.min(8 + (idx-1)*1.2, 16) * lm * cb);
+
+  if(role==='quality'){
+    const sessions10k = [
+      '8 x 400m @ 5K effort, 200m jog recovery',
+      '5 x 800m @ 10K effort, 2 min jog recovery',
+      '20 min tempo',
+      '6 x 3 min @ threshold, 90 sec jog recovery'
+    ];
+    return {
+      title:'Quality session',
+      km:roundKm((6 + idx*0.4) * lm * cb),
+      detail:sessions10k[(idx-1) % sessions10k.length]
+    };
+  }
 
   if(role==='long') return {
     title: cutback ? 'Long run (cutback week)' : 'Long run',
-    km: roundKm(longKm),
-    detail: cutback ? 'Easy effort, shorter this week — absorb the previous block.' : 'Easy, conversational effort throughout.'
+    km: longKm,
+    detail:'Easy conversational effort. Keep this controlled.'
   };
-
-  if(role==='quality'){
-    return idx%2===0
-      ? {title:'Tempo run', km:roundKm(easyKm+2), detail:'Build this around 20–25 min at threshold effort inside the run.'}
-      : {title:'Easy run + strides', km:roundKm(easyKm), detail:'Easy effort, finish with 6 x 20 sec relaxed strides.'};
-  }
 
   if(role==='steady') return {
     title:'Steady run',
-    km:roundKm(steadyKm),
-    detail:'A notch quicker than easy — sustainable and controlled.'
+    km: steadyKm,
+    detail:'Steady, controlled effort with good rhythm.'
   };
 
   return {
     title:'Easy run',
-    km:roundKm(easyKm),
+    km: easyKm,
     detail:'Easy, relaxed effort.'
   };
 }
 
-const BUILD_WEEKS = [
-  {long:18, q:'4 x 1.6km @ threshold, 2 min jog recovery', qkm:10},
-  {long:20, q:'3 x 3km @ marathon pace, 2 min jog recovery', qkm:12},
-  {long:16, q:'Easy run + 6 x 20 sec strides', qkm:7, cutback:true},
-  {long:22, q:'6 x 1km @ threshold, 90 sec jog recovery', qkm:11},
-  {long:24, q:'4 x 3km @ marathon pace, 2 min jog recovery', qkm:14},
-  {long:17, q:'30 min continuous tempo', qkm:9, cutback:true},
-  {long:26, q:'8 x 800m @ 10K effort, 90 sec jog recovery', qkm:11},
-  {long:29, q:'5 x 3km @ marathon pace, 90 sec jog recovery', qkm:16, mpLong:true},
-  {long:18, q:'Easy run + strides', qkm:7, cutback:true},
-  {long:31, q:'35 min continuous tempo', qkm:10, mpLong:true},
-  {long:20, q:'6 x 1km @ threshold, 90 sec jog recovery', qkm:11},
-  {long:24, q:'3 x 5km @ marathon pace, 3 min jog recovery', qkm:18, mpLong:true},
-  {long:16, q:'Easy run + strides — legs should feel fresh', qkm:6, cutback:true}
-];
-
 function marathonBuildSession(role, idx){
   const lm = profile.loadMultiplier;
+  const BUILD_WEEKS = [
+    {long:18, q:'4 x 1.6km @ threshold, 2 min jog recovery', qkm:10},
+    {long:20, q:'3 x 3km @ marathon pace, 2 min jog recovery', qkm:12},
+    {long:16, q:'Easy run + 6 x 20 sec strides', qkm:7, cutback:true},
+    {long:22, q:'6 x 1km @ threshold, 90 sec jog recovery', qkm:11},
+    {long:24, q:'4 x 3km @ marathon pace, 2 min jog recovery', qkm:14},
+    {long:17, q:'30 min continuous tempo', qkm:9, cutback:true},
+    {long:26, q:'8 x 800m @ 10K effort, 90 sec jog recovery', qkm:11},
+    {long:29, q:'5 x 3km @ marathon pace, 90 sec jog recovery', qkm:16, mpLong:true},
+    {long:18, q:'Easy run + strides', qkm:7, cutback:true},
+    {long:31, q:'35 min continuous tempo', qkm:10, mpLong:true},
+    {long:20, q:'6 x 1km @ threshold, 90 sec jog recovery', qkm:11},
+    {long:24, q:'3 x 5km @ marathon pace, 3 min jog recovery', qkm:18, mpLong:true},
+    {long:16, q:'Easy run + strides — legs should feel fresh', qkm:6, cutback:true}
+  ];
+
   const w = BUILD_WEEKS[Math.min(idx,13)-1];
 
   if(role==='long'){
     const km = roundKm(w.long * lm);
     const detail = w.mpLong
-      ? 'Easy effort early, then run the final 8–10km at marathon goal pace.'
+      ? 'Easy effort early, then run the final 8–10km at goal race pace.'
       : (w.cutback ? 'Easy, relaxed effort — cutback week.' : 'Easy, conversational effort throughout.');
     return {title: w.cutback ? 'Long run (cutback week)' : 'Long run', km, detail};
   }
@@ -307,14 +369,60 @@ function marathonBuildSession(role, idx){
   };
 }
 
-const TAPER_WEEKS = [
-  {long:14, q:'4 x 1km @ marathon pace, full recovery', qkm:8, easy:6, steady:7},
-  {long:9,  q:'20 min easy with 4 x 2 min @ marathon pace', qkm:6, easy:5, steady:5},
-  {long:5,  q:'20–30 min easy + 4 strides, then rest up', qkm:4, easy:4, steady:0}
-];
+function recoverySession(role, idx, targetDistanceKm){
+  const lm = Math.min(profile.loadMultiplier, 1.0);
+  const easyKm = roundKm((4 + Math.min(idx,2)) * lm);
 
-function taperSession(role, idx){
-  const w = TAPER_WEEKS[Math.min(idx,3)-1];
+  if(role==='long') return {
+    title:'Gentle longer run',
+    km:roundKm((targetDistanceKm <= KM_HALF ? 6 + idx : 8 + idx) * lm),
+    detail:'Keep this properly easy. The goal is freshening up after the event.'
+  };
+
+  if(role==='quality') return {
+    title:'Easy run + strides',
+    km:easyKm,
+    detail:'No real quality this phase — just easy running and 4–5 relaxed strides.'
+  };
+
+  if(role==='steady') return {
+    title:'Easy steady run',
+    km:roundKm((5 + idx) * lm),
+    detail:'Stay controlled. This should feel smooth, not taxing.'
+  };
+
+  return {
+    title:'Recovery jog',
+    km:easyKm,
+    detail:'Very easy. Finish feeling better than when you started.'
+  };
+}
+
+function taperSession(role, idx, targetDistanceKm){
+  const isMarathon = targetDistanceKm >= KM_MARATHON - 1;
+  const isHalf = targetDistanceKm > 10 && targetDistanceKm < KM_MARATHON - 1;
+
+  let TAPER_WEEKS;
+
+  if(isMarathon){
+    TAPER_WEEKS = [
+      {long:14, q:'4 x 1km @ goal pace, full recovery', qkm:8, easy:6, steady:7},
+      {long:9,  q:'20 min easy with 4 x 2 min @ goal pace', qkm:6, easy:5, steady:5},
+      {long:5,  q:'20–30 min easy + 4 strides, then rest up', qkm:4, easy:4, steady:0}
+    ];
+  } else if(isHalf){
+    TAPER_WEEKS = [
+      {long:10, q:'3 x 1km @ half marathon pace, full recovery', qkm:6, easy:5, steady:5},
+      {long:6,  q:'20 min easy + 4 strides', qkm:4, easy:4, steady:0}
+    ];
+  } else {
+    TAPER_WEEKS = [
+      {long:8, q:'6 x 400m @ 5K pace, full recovery', qkm:5, easy:4, steady:4},
+      {long:5, q:'20 min easy + 4 strides', qkm:4, easy:3, steady:0}
+    ];
+  }
+
+  const w = TAPER_WEEKS[Math.min(idx, TAPER_WEEKS.length)-1];
 
   if(role==='long') return {
     title:'Long run (tapering)',
@@ -341,19 +449,19 @@ function taperSession(role, idx){
   };
 }
 
-function raceDaySession(which){
-  if(which==='cph'){
-    return {
-      title:'RACE DAY — Copenhagen Half Marathon 🏁',
-      detail:'Start controlled for the first 3–5km, then settle into goal pace and finish strongly.',
-      race:true
-    };
-  }
+function eventRaceDaySession(event){
+  const dist = eventDistanceKm(event);
+  const pace = event.goalSeconds && dist ? fmtPace(event.goalSeconds / dist) : null;
 
   return {
-    title:'RACE DAY — TCS London Marathon 🏁',
-    detail:'Start controlled, lock into marathon pace, and stay relaxed through halfway. Save your best focus for the final 10km.',
-    race:true
+    title:`EVENT DAY — ${event.name} 🏁`,
+    detail:event.goalSeconds
+      ? `Target time ${fmtHMS(event.goalSeconds)} over ${dist}km.${pace ? ` Aim for ${pace}.` : ''}`
+      : `Event day for ${event.name}.`,
+    race:true,
+    role:'race',
+    km:dist,
+    eventId:event.id
   };
 }
 
@@ -402,11 +510,23 @@ function strengthSessionFor(date){
   };
 }
 
-function generateDaySession(date){
-  const b = phaseBoundaries();
+function buildSessionForTarget(role, idx, targetDistanceKm){
+  if(targetDistanceKm <= 10){
+    return tenKBuildSession(role, idx);
+  }
 
-  if(sameDay(date,b.cph)) return {...raceDaySession('cph'), role:'race'};
-  if(sameDay(date,b.ldn)) return {...raceDaySession('london'), role:'race'};
+  if(targetDistanceKm <= KM_HALF){
+    return halfBuildSession(role, idx);
+  }
+
+  return marathonBuildSession(role, idx);
+}
+
+function generateDaySession(date){
+  const dayEvent = events.find(e => e.status !== 'cancelled' && sameDay(date, toDate(e.date)));
+  if(dayEvent){
+    return eventRaceDaySession(dayEvent);
+  }
 
   const wd = weekdayIdx(date);
   const role = roleForWeekday(wd);
@@ -420,15 +540,20 @@ function generateDaySession(date){
   }
 
   const ph = phaseForDate(date);
+  const targetDistanceKm = ph.b && ph.b.distanceKm ? ph.b.distanceKm : primaryEventDistanceKm();
   let content;
 
-  if(ph.key==='base') content = baseWeekSession(role, ph.idx);
-  else if(ph.key==='halfbuild') content = halfBuildSession(role, ph.idx);
-  else if(ph.key==='recovery') content = recoverySession(role, ph.idx);
-  else if(ph.key==='marathonbase') content = marathonBaseSession(role, ph.idx);
-  else if(ph.key==='marathonbuild') content = marathonBuildSession(role, ph.idx);
-  else if(ph.key==='taper') content = taperSession(role, ph.idx);
-  else content = {title:'Easy run', km:5, detail:'Easy effort.'};
+  if(ph.key==='base'){
+    content = baseWeekSession(role, ph.idx, targetDistanceKm);
+  } else if(ph.key==='build'){
+    content = buildSessionForTarget(role, ph.idx, targetDistanceKm);
+  } else if(ph.key==='recovery'){
+    content = recoverySession(role, ph.idx, targetDistanceKm);
+  } else if(ph.key==='taper'){
+    content = taperSession(role, ph.idx, targetDistanceKm);
+  } else {
+    content = {title:'Easy run', km:5, detail:'Easy effort.'};
+  }
 
   return {...content, role, phaseKey:ph.key, phaseIdx:ph.idx};
 }
@@ -452,7 +577,7 @@ function paceLabelForRole(role){
   if(role==='steady') return fmtPace(z.steady);
   if(role==='long') return fmtPace(z.long);
   if(role==='easy') return fmtPace(z.easy);
-  if(role==='race') return `Goal marathon pace: ${fmtPace(z.marathonGoal)}`;
+  if(role==='race') return `Goal event pace: ${fmtPace(z.goalRace)}`;
 
   return null;
 }
