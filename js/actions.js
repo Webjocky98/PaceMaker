@@ -304,3 +304,146 @@ function saveSettings(){
   closeModal('settingsOverlay');
   render();
 }
+function findEventById(id){
+  return events.find(e => e.id === id) || null;
+}
+
+function openEventEditor(eventId){
+  const existing = eventId ? findEventById(eventId) : null;
+
+  const distType = existing ? existing.distanceType : 'half';
+  const goal = secondsToHoursMinutes(existing && existing.goalSeconds ? existing.goalSeconds : 0);
+
+  const body = document.getElementById('eventModalBody');
+  body.innerHTML = `
+    <label>Event name</label>
+    <input id="evtName" type="text" value="${escapeHtml(existing ? existing.name : '')}" placeholder="e.g. Manchester Marathon">
+
+    <label>Event date</label>
+    <input id="evtDate" type="date" value="${existing ? existing.date : ''}">
+
+    <label>Distance</label>
+    <select id="evtDistanceType" onchange="toggleCustomEventDistance()">
+      <option value="5k" ${distType==='5k'?'selected':''}>5km</option>
+      <option value="10k" ${distType==='10k'?'selected':''}>10km</option>
+      <option value="half" ${distType==='half'?'selected':''}>Half Marathon</option>
+      <option value="marathon" ${distType==='marathon'?'selected':''}>Marathon</option>
+      <option value="custom" ${distType==='custom'?'selected':''}>Custom</option>
+    </select>
+
+    <div id="evtCustomDistanceWrap" style="display:${distType==='custom' ? 'block' : 'none'};">
+      <label>Custom distance (km)</label>
+      <input id="evtCustomDistance" type="number" step="0.1" min="0" value="${distType==='custom' ? (existing.distanceKm || '') : ''}">
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Target time hours</label>
+        <input id="evtGoalHours" type="number" min="0" step="1" value="${goal.hours}">
+      </div>
+      <div>
+        <label>Target time minutes</label>
+        <input id="evtGoalMinutes" type="number" min="0" max="59" step="1" value="${goal.minutes}">
+      </div>
+    </div>
+
+    <label>Priority</label>
+    <select id="evtPriority">
+      <option value="A" ${(existing && existing.priority==='A') || !existing ? 'selected' : ''}>A - primary goal</option>
+      <option value="B" ${existing && existing.priority==='B' ? 'selected' : ''}>B - secondary goal</option>
+      <option value="C" ${existing && existing.priority==='C' ? 'selected' : ''}>C - tune-up / low priority</option>
+    </select>
+
+    <label>Notes</label>
+    <textarea id="evtNotes" rows="2">${escapeHtml(existing ? (existing.notes || '') : '')}</textarea>
+
+    <div class="btn-row">
+      <button class="btn" onclick="saveEvent('${existing ? existing.id : ''}')">Save event</button>
+      ${existing ? `<button class="btn secondary" onclick="deleteEvent('${existing.id}')">Delete</button>` : ''}
+    </div>
+  `;
+
+  openModal('eventOverlay');
+}
+
+function toggleCustomEventDistance(){
+  const type = document.getElementById('evtDistanceType').value;
+  const wrap = document.getElementById('evtCustomDistanceWrap');
+  if(wrap) wrap.style.display = type === 'custom' ? 'block' : 'none';
+}
+
+function saveEvent(eventId){
+  const name = document.getElementById('evtName').value.trim();
+  const date = document.getElementById('evtDate').value;
+  const distanceType = document.getElementById('evtDistanceType').value;
+  const customDistance = parseFloat(document.getElementById('evtCustomDistance')?.value || 0) || null;
+  const goalHours = parseInt(document.getElementById('evtGoalHours').value || '0', 10);
+  const goalMinutes = parseInt(document.getElementById('evtGoalMinutes').value || '0', 10);
+  const priority = document.getElementById('evtPriority').value;
+  const notes = document.getElementById('evtNotes').value.trim();
+
+  if(!name || !date) return;
+
+  const distanceKm = distanceType === 'custom'
+    ? customDistance
+    : STANDARD_EVENT_DISTANCES[distanceType];
+
+  const event = {
+    id: eventId || `evt_${Date.now()}`,
+    name,
+    date,
+    type:'race',
+    distanceType,
+    distanceKm,
+    goalSeconds: hoursMinutesToSeconds(goalHours, goalMinutes),
+    priority,
+    notes,
+    status:'planned'
+  };
+
+  if(eventId){
+    events = events.map(e => e.id === eventId ? event : e);
+  } else {
+    events.push(event);
+  }
+
+  events.sort((a,b)=>a.date.localeCompare(b.date));
+  saveEvents();
+  closeModal('eventOverlay');
+  render();
+}
+
+function deleteEvent(eventId){
+  events = events.filter(e => e.id !== eventId);
+  saveEvents();
+  closeModal('eventOverlay');
+  render();
+}
+
+function openEventModal(eventId){
+  const event = findEventById(eventId);
+  if(!event) return;
+
+  const dist = eventDistanceKm(event);
+  const pace = event.goalSeconds && dist ? fmtPace(event.goalSeconds / dist) : null;
+  const hm = secondsToHoursMinutes(event.goalSeconds || 0);
+
+  const body = document.getElementById('eventModalBody');
+  body.innerHTML = `
+    <div class="today-role ${event.priority==='A' ? 'role-race' : event.priority==='B' ? 'role-long' : 'role-rest'}">${escapeHtml(event.priority)} priority</div>
+    <div class="today-title" style="font-size:22px;">${escapeHtml(event.name)}</div>
+    <div class="today-detail">${escapeHtml(event.date)}</div>
+
+    ${dist ? `<div class="pace-chip">${dist} km <small>distance</small></div>` : ''}
+    ${event.goalSeconds ? `<div class="pace-chip">${hm.hours}h ${hm.minutes}m <small>goal time</small></div>` : ''}
+    ${pace ? `<div class="pace-chip">${escapeHtml(pace)} <small>target pace</small></div>` : ''}
+
+    ${event.notes ? `<div class="hint" style="margin-top:12px;">${escapeHtml(event.notes)}</div>` : ''}
+
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn" onclick="openEventEditor('${event.id}')">Edit event</button>
+    </div>
+  `;
+
+  openModal('eventOverlay');
+}
