@@ -4,6 +4,7 @@ const KEYS = {
   coach:'pm_coach_cache_v2',
   adaptations:'pm_adaptations_v1',
   chat:'pm_chat_v1'
+  events:'pm_events_v1',
 };
 
 const PHASE_META = {
@@ -22,10 +23,6 @@ const KM_5K = 5;
 
 const DEFAULT_PROFILE = {
   startDate: new Date().toISOString().slice(0,10),
-  copenhagenDate: '2026-09-20',
-  copenhagenGoal: null,
-  londonDate: '2027-04-25',
-  goalMarathonSeconds: 4*3600,
   priorMarathonSeconds: 4*3600 + 58*60,
   trainingDays: [2,4,6,0],
   strengthDays: [1,5],
@@ -73,6 +70,67 @@ let pendingChatAdaptations = [];
 let pendingRpe = null;
 let modalDate = null;
 let calendarMonthOffset = 0;
+let events = [];
+
+const STANDARD_EVENT_DISTANCES = {
+  '5k': 5,
+  '10k': 10,
+  'half': 21.0975,
+  'marathon': 42.195
+};
+
+function defaultEvents(){
+  return [
+    {
+      id: 'evt_cph',
+      name: 'Copenhagen Half Marathon',
+      date: '2026-09-20',
+      type: 'race',
+      distanceType: 'half',
+      distanceKm: STANDARD_EVENT_DISTANCES.half,
+      goalSeconds: 2 * 3600,
+      priority: 'B',
+      notes: '',
+      status: 'planned'
+    },
+    {
+      id: 'evt_ldn',
+      name: 'TCS London Marathon',
+      date: '2027-04-25',
+      type: 'race',
+      distanceType: 'marathon',
+      distanceKm: STANDARD_EVENT_DISTANCES.marathon,
+      goalSeconds: 4 * 3600,
+      priority: 'A',
+      notes: '',
+      status: 'planned'
+    }
+  ];
+}
+
+function saveEvents(){
+  saveLocal(KEYS.events, events);
+}
+
+function eventDistanceKm(event){
+  if(!event) return null;
+  if(event.distanceType === 'custom') return Number(event.distanceKm) || null;
+  return STANDARD_EVENT_DISTANCES[event.distanceType] || Number(event.distanceKm) || null;
+}
+
+function hoursMinutesToSeconds(hours, minutes){
+  const h = Number(hours) || 0;
+  const m = Number(minutes) || 0;
+  return (h * 3600) + (m * 60);
+}
+
+function secondsToHoursMinutes(totalSec){
+  totalSec = Number(totalSec) || 0;
+  return {
+    hours: Math.floor(totalSec / 3600),
+    minutes: Math.round((totalSec % 3600) / 60)
+  };
+}
 
 function saveLocal(key, value){
   localStorage.setItem(key, JSON.stringify(value));
@@ -114,4 +172,5 @@ function loadAllState(){
   sessions = loadLocal(KEYS.sessions) || [];
   adaptations = loadLocal(KEYS.adaptations) || {};
   chatHistory = loadLocal(KEYS.chat) || [];
+  events = loadLocal(KEYS.events) || defaultEvents();
 }
