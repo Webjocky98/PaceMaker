@@ -3,7 +3,7 @@ const KEYS = {
   sessions:'pm_sessions_v2',
   coach:'pm_coach_cache_v2',
   adaptations:'pm_adaptations_v1',
-  chat:'pm_chat_v1'
+  chat:'pm_chat_v1',
   events:'pm_events_v1',
 };
 
