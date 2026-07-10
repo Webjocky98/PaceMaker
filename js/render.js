@@ -320,9 +320,9 @@ function renderSingleMonth(monthDate){
     }
 
     cells.push(`
-      <div
-        class="cal-day ${out?'out':''} ${sameDay(d,today)?'today':''} ${pastOrToday?'clickable':''}"
-        ${pastOrToday ? `onclick="openLogModal('${iso}')"` : ''}
+    <div
+        class="cal-day ${out?'out':''} ${sameDay(d,today)?'today':''} clickable"
+        onclick="${pastOrToday ? `openLogModal('${iso}')` : `openSessionDetails('${iso}')`}"
       >
         <div class="cal-num">${d.getDate()}</div>
         ${items}
@@ -396,7 +396,7 @@ function render(){
       summary = logged.map(x => formatSessionSummaryShort(x)).join(' · ');
     }
 
-    strip += `<div class="day-cell ${isToday?'today':''} ${isPastOrToday?'clickable':''}" ${isPastOrToday?`onclick="openLogModal('${iso}')"`:''}>
+  strip += `<div class="day-cell ${isToday?'today':''} clickable" onclick="${isPastOrToday ? `openLogModal('${iso}')` : `openSessionDetails('${iso}')`}">
       <div class="dname">${dayName(d)} ${d.getDate()}${logged.length?' <span class="logged-dot">●</span>':''}</div>
       <div class="drole" style="color:${roleColor(s.role)}">${escapeHtml(shortTitle(s))}${extra}</div>
       <div class="ddist">${escapeHtml(summary || distLabel)}</div>
