@@ -396,7 +396,7 @@ function render(){
       summary = logged.map(x => formatSessionSummaryShort(x)).join(' · ');
     }
 
-  strip += `<div class="day-cell ${isToday?'today':''} clickable" onclick="${isPastOrToday ? `openLogModal('${iso}')` : `openSessionDetails('${iso}')`}">
+strip += `<div class="day-cell ${isToday?'today':''} clickable" onclick="${isPastOrToday ? `openLogModal('${iso}')` : `openSessionDetails('${iso}')`}">
       <div class="dname">${dayName(d)} ${d.getDate()}${logged.length?' <span class="logged-dot">●</span>':''}</div>
       <div class="drole" style="color:${roleColor(s.role)}">${escapeHtml(shortTitle(s))}${extra}</div>
       <div class="ddist">${escapeHtml(summary || distLabel)}</div>
