@@ -10,7 +10,14 @@ function todayISO(){
 }
 
 function toDate(iso){
-  const [y,m,d] = iso.split('-').map(Number);
+  if(!iso || typeof iso !== 'string'){
+    return new Date(NaN);
+  }
+  const parts = iso.split('-').map(Number);
+  if(parts.length !== 3 || parts.some(Number.isNaN)){
+    return new Date(NaN);
+  }
+  const [y,m,d] = parts;
   return new Date(y, m-1, d, 12, 0, 0, 0);
 }
 
