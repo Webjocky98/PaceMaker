@@ -250,6 +250,17 @@ function renderUpcomingEvents(){
     `;
   }).join('');
 }
+
+function bindEventRowClicks(){
+  document.querySelectorAll('.event-row-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const eventId = btn.dataset.eventId;
+      openEventModal(eventId);
+    });
+  });
+}
+
+
 function renderCalendarMonths(){
   const start = startOfMonth(toDate(profile.startDate));
   const endEvent = getUpcomingEvents().length ? getUpcomingEvents()[getUpcomingEvents().length - 1] : null;
@@ -540,4 +551,5 @@ strip += `<div class="day-cell ${isToday?'today':''} clickable" onclick="${isPas
     if(out) out.textContent = cached.text;
     if(metaEl) metaEl.textContent = 'Last updated ' + new Date(cached.ts).toLocaleString();
   }
+  bindEventRowClicks();
 }
