@@ -505,6 +505,23 @@ input:focus,select:focus,textarea:focus{
 
 .log-row:last-child{border-bottom:none;}
 
+.event-row-btn{
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:9px 10px;
+  margin-bottom:8px;
+  color:var(--chalk);
+}
+
+.event-row-btn:hover{
+  border-color:var(--amber);
+  background:rgba(255,255,255,.02);
+}
+
+.event-row-btn:focus{
+  outline:2px solid var(--amber);
+  outline-offset:2px;
+}
 .log-role{
   font-size:10px;
   padding:2px 7px;
