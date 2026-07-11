@@ -165,7 +165,23 @@ function escapeHtml(str){
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
 }
-
+function normaliseEventFromApi(row){
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    date: typeof row.date === 'string' ? row.date.slice(0,10) : row.date,
+    type: row.type,
+    distanceType: row.distance_type,
+    distanceKm: row.distance_km !== null ? Number(row.distance_km) : null,
+    goalSeconds: row.goal_seconds !== null ? Number(row.goal_seconds) : null,
+    priority: row.priority,
+    notes: row.notes || '',
+    status: row.status || 'planned',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
 function loadAllState(){
   profile = loadLocal(KEYS.profile) || {...DEFAULT_PROFILE};
   profile = {...DEFAULT_PROFILE, ...profile};
