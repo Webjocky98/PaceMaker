@@ -2,3 +2,5 @@ connection failed: connection to server at "127.0.0.1", port 5432 failed: FATAL:
 Multiple connection attempts failed. All failures were:
 - host: 'localhost', port: '5432', hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
 - host: 'localhost', port: '5432', hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d postgres -h 127.0.0.1
