@@ -418,11 +418,16 @@ async function saveEvent(eventId){
   }
 }
 
-function deleteEvent(eventId){
-  events = events.filter(e => e.id !== eventId);
-  saveEvents();
-  closeModal('eventOverlay');
-  render();
+async function deleteEvent(eventId){
+  try{
+    await deleteEventInApi(eventId);
+    events = events.filter(e => String(e.id) !== String(eventId));
+    closeModal('eventOverlay');
+    render();
+  }catch(err){
+    console.error('Failed to delete event:', err);
+    alert('Failed to delete event.');
+  }
 }
 
 function openEventModal(eventId){
