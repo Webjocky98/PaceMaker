@@ -2,6 +2,16 @@ async function initialiseAppState(){
   loadAllState();
 
   try{
+    profile = {
+      ...DEFAULT_PROFILE,
+      ...(await fetchProfileFromApi())
+    };
+  }catch(err){
+    console.error('Failed to load profile from API:', err);
+    profile = {...DEFAULT_PROFILE};
+  }
+
+  try{
     events = await fetchEventsFromApi();
   }catch(err){
     console.error('Failed to load events from API:', err);
@@ -9,13 +19,18 @@ async function initialiseAppState(){
   }
 
   const changed = runAdaptationIfNeeded();
-  if(changed) saveProfile();
+  if(changed){
+    try{
+      profile = await saveProfileToApi(profile);
+    }catch(err){
+      console.error('Failed to save adapted profile to API:', err);
+    }
+  }
 }
 
 (async function boot(){
   try{
     await initialiseAppState();
-    saveProfile();
     render();
   }catch(e){
     const app = document.getElementById('app');
