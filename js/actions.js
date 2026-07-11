@@ -268,17 +268,11 @@ function openSettings(){
   openModal('settingsOverlay');
 }
 
-function saveSettings(){
+async function saveSettings(){
   const prior = parseHMS(document.getElementById('setPrior').value);
-  const goal = parseHMS(document.getElementById('setGoal').value);
-  const cphGoal = parseHMS(document.getElementById('setCphGoal').value);
 
   if(prior) profile.priorMarathonSeconds = prior;
-  if(goal) profile.goalMarathonSeconds = goal;
-  if(cphGoal) profile.copenhagenGoal = cphGoal;
 
-  profile.copenhagenDate = document.getElementById('setCph').value || profile.copenhagenDate;
-  profile.londonDate = document.getElementById('setLdn').value || profile.londonDate;
   profile.startDate = document.getElementById('setStart').value || profile.startDate;
   profile.trainingTimeOfDay = document.getElementById('setTod').value;
   profile.dietaryPref = document.getElementById('setDiet').value;
@@ -290,9 +284,14 @@ function saveSettings(){
   if(chosenRun.length >= 2) profile.trainingDays = chosenRun;
   profile.strengthDays = chosenStrength;
 
-  saveProfile();
-  closeModal('settingsOverlay');
-  render();
+  try{
+    profile = await saveProfileToApi(profile);
+    closeModal('settingsOverlay');
+    render();
+  }catch(err){
+    console.error('Failed to save profile:', err);
+    alert(err.message || 'Failed to save settings.');
+  }
 }
 function findEventById(id){
   return events.find(e => String(e.id) === String(id)) || null;
