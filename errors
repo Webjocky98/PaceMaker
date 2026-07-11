@@ -1,7 +1,5 @@
-document.querySelectorAll('.event-row-btn') [0] .dataset.eventId
-'4'
-document.querySelectorAll('.event-row-btn') [0] .onclick
-ƒ (){
-      const eventId = row.dataset.eventId;
-      openEventModal(eventId);
-    }
+actions.js:428 Failed to delete event: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+deleteEvent	@	actions.js:428
+await in deleteEvent		
+confirmDeleteEvent	@	actions.js:439
+onclick	@	(index):1
