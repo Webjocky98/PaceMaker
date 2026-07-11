@@ -42,7 +42,7 @@ app.get('/api/test-user', async (req, res) => {
   }
 });
 
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 
