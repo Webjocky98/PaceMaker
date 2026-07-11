@@ -429,7 +429,15 @@ async function deleteEvent(eventId){
     alert('Failed to delete event.');
   }
 }
+function confirmDeleteEvent(eventId){
+  const event = findEventById(eventId);
+  const name = event ? event.name : 'this event';
 
+  const ok = window.confirm(`Delete ${name}? This will remove it from the database.`);
+  if(!ok) return;
+
+  deleteEvent(eventId);
+}
 function openEventModal(eventId){
   const event = findEventById(eventId);
   if(!event) return;
@@ -452,12 +460,12 @@ function openEventModal(eventId){
 
     <div class="btn-row" style="margin-top:14px;">
       <button class="btn" onclick="openEventEditor('${event.id}')">Edit event</button>
+      <button class="btn secondary" onclick="confirmDeleteEvent('${event.id}')">Delete event</button>
     </div>
   `;
 
   openModal('eventOverlay');
 }
-
 function openSessionDetails(dateISO){
   const d = toDate(dateISO);
   const plan = fullDayPlan(d);
