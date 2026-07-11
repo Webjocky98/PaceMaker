@@ -174,3 +174,50 @@ function loadAllState(){
   chatHistory = loadLocal(KEYS.chat) || [];
   events = loadLocal(KEYS.events) || defaultEvents();
 }
+async function fetchEventsFromApi(){
+  const res = await fetch('/api/events');
+  if(!res.ok){
+    throw new Error('Failed to fetch events');
+  }
+  return await res.json();
+}
+
+async function createEventInApi(event){
+  const res = await fetch('/api/events', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(event)
+  });
+
+  if(!res.ok){
+    throw new Error('Failed to create event');
+  }
+
+  return await res.json();
+}
+
+async function updateEventInApi(eventId, event){
+  const res = await fetch(`/api/events/${eventId}`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(event)
+  });
+
+  if(!res.ok){
+    throw new Error('Failed to update event');
+  }
+
+  return await res.json();
+}
+
+async function deleteEventInApi(eventId){
+  const res = await fetch(`/api/events/${eventId}`, {
+    method:'DELETE'
+  });
+
+  if(!res.ok){
+    throw new Error('Failed to delete event');
+  }
+
+  return await res.json();
+}
