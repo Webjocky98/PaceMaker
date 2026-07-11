@@ -1,7 +1,4 @@
-Uncaught SyntaxError: Unexpected token '<'
-dates.js:1 Uncaught SyntaxError: Unexpected token '<'
-plan.js:1 Uncaught SyntaxError: Unexpected token '<'
-render.js:1 Uncaught SyntaxError: Unexpected token '<'
-actions.js:1 Uncaught SyntaxError: Unexpected token '<'
-ai.js:1 Uncaught SyntaxError: Unexpected token '<'
-app.js:1 Uncaught SyntaxError: Unexpected token '<'
+Invoke-RestMethod -Uri "http://localhost:3000/api/events" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"name":"Manchester Marathon","date":"2027-04-18","type":"race","distanceType":"marathon","distanceKm":42.195,"goalSeconds":14400,"priority":"A","notes":"Target marathon","status":"planned"}'
