@@ -183,12 +183,11 @@ function normaliseEventFromApi(row){
   };
 }
 function loadAllState(){
-  profile = loadLocal(KEYS.profile) || {...DEFAULT_PROFILE};
-  profile = {...DEFAULT_PROFILE, ...profile};
+  profile = {...DEFAULT_PROFILE};
   sessions = loadLocal(KEYS.sessions) || [];
   adaptations = loadLocal(KEYS.adaptations) || {};
   chatHistory = loadLocal(KEYS.chat) || [];
-  events = []
+  events = [];
 }
 
 function normaliseProfileFromApi(row){
