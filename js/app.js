@@ -1,17 +1,20 @@
-function initialiseAppState(){
+async function initialiseAppState(){
   loadAllState();
 
-  if(profile.copenhagenGoal===null){
-    profile.copenhagenGoal = Math.round(suggestedHalfGoalSeconds());
+  try{
+    events = await fetchEventsFromApi();
+  }catch(err){
+    console.error('Failed to load events from API:', err);
+    events = [];
   }
 
   const changed = runAdaptationIfNeeded();
   if(changed) saveProfile();
 }
 
-(function boot(){
+(async function boot(){
   try{
-    initialiseAppState();
+    await initialiseAppState();
     saveProfile();
     render();
   }catch(e){
