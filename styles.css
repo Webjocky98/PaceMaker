@@ -518,21 +518,19 @@ input:focus,select:focus,textarea:focus{
   cursor:pointer;
 }
 
-.event-row-btn:hover{
-  border-color:var(--amber);
-  background:rgba(255,255,255,.02);
-}
-
-.event-row-btn:focus{
-  outline:2px solid var(--amber);
-  outline-offset:2px;
-}
 .event-row-btn{
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  background:var(--ink);
   border:1px solid var(--line);
   border-radius:8px;
-  padding:9px 10px;
-  margin-bottom:8px;
   color:var(--chalk);
+  padding:10px 12px;
+  margin-bottom:8px;
+  cursor:pointer;
 }
 
 .event-row-btn:hover{
@@ -543,6 +541,11 @@ input:focus,select:focus,textarea:focus{
 .event-row-btn:focus{
   outline:2px solid var(--amber);
   outline-offset:2px;
+}
+
+.event-row-left{
+  min-width:0;
+  flex:1;
 }
 .log-role{
   font-size:10px;
