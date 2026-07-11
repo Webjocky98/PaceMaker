@@ -1,6 +1,11 @@
-connection failed: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
-Multiple connection attempts failed. All failures were:
-- host: 'localhost', port: '5432', hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
-- host: 'localhost', port: '5432', hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
-
-"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -d postgres -h 127.0.0.1
+PS C:\Users\cam> "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d postgres -h 127.0.0.1
+At line:1 char:47
++ "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d postgres ...
++                                               ~~
+Unexpected token '-U' in expression or statement.
+At line:1 char:50
++ "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d postgres ...
++                                                  ~~~~~~~~
+Unexpected token 'postgres' in expression or statement.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : UnexpectedToken
