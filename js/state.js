@@ -172,7 +172,7 @@ function loadAllState(){
   sessions = loadLocal(KEYS.sessions) || [];
   adaptations = loadLocal(KEYS.adaptations) || {};
   chatHistory = loadLocal(KEYS.chat) || [];
-  events = loadLocal(KEYS.events) || defaultEvents();
+  events = []
 }
 async function fetchEventsFromApi(){
   const res = await fetch('/api/events');
