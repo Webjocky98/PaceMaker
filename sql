@@ -52,3 +52,27 @@ CREATE TABLE sessions (
   mobility TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+
+INSERT INTO profiles (
+  user_id,
+  start_date,
+  prior_marathon_seconds,
+  training_days,
+  strength_days,
+  dietary_pref,
+  training_time_of_day,
+  load_multiplier,
+  strength_focus
+)
+VALUES (
+  1,
+  CURRENT_DATE,
+  17880,
+  '[2,4,6,0]',
+  '[1,5]',
+  'none',
+  'morning',
+  1.0,
+  'balanced'
+);
