@@ -372,7 +372,7 @@ function toggleCustomEventDistance(){
   if(wrap) wrap.style.display = type === 'custom' ? 'block' : 'none';
 }
 
-function saveEvent(eventId){
+async function saveEvent(eventId){
   const name = document.getElementById('evtName').value.trim();
   const date = document.getElementById('evtDate').value;
   const distanceType = document.getElementById('evtDistanceType').value;
@@ -388,8 +388,7 @@ function saveEvent(eventId){
     ? customDistance
     : STANDARD_EVENT_DISTANCES[distanceType];
 
-  const event = {
-    id: eventId || `evt_${Date.now()}`,
+  const eventPayload = {
     name,
     date,
     type:'race',
@@ -401,16 +400,22 @@ function saveEvent(eventId){
     status:'planned'
   };
 
-  if(eventId){
-    events = events.map(e => e.id === eventId ? event : e);
-  } else {
-    events.push(event);
-  }
+  try{
+    if(eventId){
+      const updated = await updateEventInApi(eventId, eventPayload);
+      events = events.map(e => String(e.id) === String(eventId) ? updated : e);
+    } else {
+      const created = await createEventInApi(eventPayload);
+      events.push(created);
+    }
 
-  events.sort((a,b)=>a.date.localeCompare(b.date));
-  saveEvents();
-  closeModal('eventOverlay');
-  render();
+    events.sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    closeModal('eventOverlay');
+    render();
+  }catch(err){
+    console.error('Failed to save event:', err);
+    alert('Failed to save event.');
+  }
 }
 
 function deleteEvent(eventId){
