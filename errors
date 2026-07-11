@@ -1,5 +1,11 @@
-The application has lost the database connection:
-⁃ If the connection was idle it may have been forcibly disconnected.
-⁃ The application server or database server may have been restarted.
-⁃ The user session may have timed out.
-Do you want to continue and establish a new session
+psql: error: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
+PS C:\Users\cam> &"C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d postgres -h 127.0.0.1
+Password for user postgres:
+
+psql (18.4)
+WARNING: Console code page (850) differs from Windows code page (1252)
+         8-bit characters might not work correctly. See psql reference
+         page "Notes for Windows users" for details.
+Type "help" for help.
+
+postgres=#
