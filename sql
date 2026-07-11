@@ -76,3 +76,28 @@ VALUES (
   1.0,
   'balanced'
 );
+
+INSERT INTO events (
+  user_id,
+  name,
+  date,
+  type,
+  distance_type,
+  distance_km,
+  goal_seconds,
+  priority,
+  notes,
+  status
+)
+VALUES (
+  1,
+  'Test Half Marathon',
+  CURRENT_DATE + INTERVAL '90 days',
+  'race',
+  'half',
+  21.10,
+  7200,
+  'A',
+  'Example event',
+  'planned'
+);
