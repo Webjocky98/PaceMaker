@@ -231,35 +231,28 @@ function renderUpcomingEvents(){
     const hm = secondsToHoursMinutes(e.goalSeconds || 0);
 
     return `
-      <button
-        type="button"
-        class="event-row-btn"
-        data-event-id="${escapeHtml(String(e.id))}"
-      >
-        <div class="log-row" style="border-bottom:none;padding:0;">
-          <div>
-            <span class="log-role" style="background:${e.priority==='A' ? 'rgba(215,38,61,.22)' : e.priority==='B' ? 'rgba(255,179,0,.18)' : 'rgba(255,255,255,.08)'};color:${e.priority==='A' ? '#ff9cab' : e.priority==='B' ? 'var(--amber)' : 'var(--chalk-dim)'}">${escapeHtml(e.priority)}</span>
-            <span style="margin-left:8px;">${escapeHtml(e.name)}</span>
-            <div class="hint" style="margin-top:4px;">
-              ${dist ? `${dist}km` : ''}${e.goalSeconds ? ` · target ${hm.hours}h ${hm.minutes}m` : ''} · ${escapeHtml(e.date)}
-            </div>
+      <div class="event-row-btn" data-event-id="${escapeHtml(String(e.id))}">
+        <div class="event-row-left">
+          <span class="log-role" style="background:${e.priority==='A' ? 'rgba(215,38,61,.22)' : e.priority==='B' ? 'rgba(255,179,0,.18)' : 'rgba(255,255,255,.08)'};color:${e.priority==='A' ? '#ff9cab' : e.priority==='B' ? 'var(--amber)' : 'var(--chalk-dim)'}">${escapeHtml(e.priority)}</span>
+          <span style="margin-left:8px;">${escapeHtml(e.name)}</span>
+          <div class="hint" style="margin-top:4px;">
+            ${dist ? `${dist}km` : ''}${e.goalSeconds ? ` · target ${hm.hours}h ${hm.minutes}m` : ''} · ${escapeHtml(e.date)}
           </div>
-          <div class="log-meta">View</div>
         </div>
-      </button>
+        <div class="log-meta">View</div>
+      </div>
     `;
   }).join('');
 }
 
 function bindEventRowClicks(){
-  document.querySelectorAll('.event-row-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const eventId = btn.dataset.eventId;
+  document.querySelectorAll('.event-row-btn').forEach(row => {
+    row.onclick = function(){
+      const eventId = row.dataset.eventId;
       openEventModal(eventId);
-    });
+    };
   });
 }
-
 
 function renderCalendarMonths(){
   const start = startOfMonth(toDate(profile.startDate));
