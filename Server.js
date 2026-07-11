@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
 const pool = require('./db/db');
+const eventsRouter = require('./routes/events');
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 
 const clientPath = path.join(__dirname, '../../client');
 app.use(express.static(clientPath));
+app.use('/api/events', eventsRouter);
 
 app.get('/api/health', async (req, res) => {
   try {
