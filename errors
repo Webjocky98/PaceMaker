@@ -1,4 +1,4 @@
-Invoke-RestMethod -Uri "http://localhost:3000/api/events" `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body '{"name":"Manchester Marathon","date":"2027-04-18","type":"race","distanceType":"marathon","distanceKm":42.195,"goalSeconds":14400,"priority":"A","notes":"Target marathon","status":"planned"}'
+connection failed: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
+Multiple connection attempts failed. All failures were:
+- host: 'localhost', port: '5432', hostaddr: '::1': connection failed: connection to server at "::1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
+- host: 'localhost', port: '5432', hostaddr: '127.0.0.1': connection failed: connection to server at "127.0.0.1", port 5432 failed: FATAL:  password authentication failed for user "postgres"
