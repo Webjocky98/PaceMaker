@@ -190,6 +190,47 @@ function loadAllState(){
   chatHistory = loadLocal(KEYS.chat) || [];
   events = []
 }
+
+function normaliseProfileFromApi(row){
+  return {
+    id: row.id,
+    userId: row.user_id,
+    startDate: typeof row.start_date === 'string' ? row.start_date.slice(0,10) : row.start_date,
+    priorMarathonSeconds: row.prior_marathon_seconds !== null ? Number(row.prior_marathon_seconds) : null,
+    trainingDays: Array.isArray(row.training_days) ? row.training_days.map(Number) : [],
+    strengthDays: Array.isArray(row.strength_days) ? row.strength_days.map(Number) : [],
+    dietaryPref: row.dietary_pref || 'none',
+    trainingTimeOfDay: row.training_time_of_day || 'morning',
+    loadMultiplier: row.load_multiplier !== null ? Number(row.load_multiplier) : 1,
+    lastAdaptedWeekKey: row.last_adapted_week_key || null,
+    strengthFocus: row.strength_focus || 'balanced'
+  };
+}
+
+async function fetchProfileFromApi(){
+  const res = await fetch('/api/profile');
+  if(!res.ok){
+    throw new Error('Failed to fetch profile');
+  }
+  const data = await res.json();
+  return normaliseProfileFromApi(data);
+}
+
+async function saveProfileToApi(profilePayload){
+  const res = await fetch('/api/profile', {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(profilePayload)
+  });
+
+  if(!res.ok){
+    const data = await res.json().catch(() => null);
+    throw new Error(data && data.error ? data.error : 'Failed to save profile');
+  }
+
+  const data = await res.json();
+  return normaliseProfileFromApi(data);
+}
 async function fetchEventsFromApi(){
   const res = await fetch('/api/events');
   if(!res.ok){
