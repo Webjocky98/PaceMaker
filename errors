@@ -1,15 +1,4 @@
-CREATE TABLE sessions (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  role TEXT NOT NULL,
-  completed BOOLEAN NOT NULL DEFAULT FALSE,
-  distance_km NUMERIC(6,2),
-  duration_sec INTEGER,
-  rpe INTEGER,
-  notes TEXT,
-  strength_focus_text TEXT,
-  exercises_json JSONB,
-  mobility TEXT,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+Invoke-RestMethod -Uri "http://localhost:3000/api/sessions" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body '{"date":"2026-07-12","role":"easy","completed":true,"distanceKm":6.5,"durationSec":2280,"rpe":5,"notes":"Manual API test"}'
