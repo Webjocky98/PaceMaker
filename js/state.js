@@ -1,17 +1,14 @@
 const KEYS = {
-  profile:'pm_profile_v2',
-  sessions:'pm_sessions_v2',
   coach:'pm_coach_cache_v2',
   adaptations:'pm_adaptations_v1',
-  chat:'pm_chat_v1',
-  events:'pm_events_v1'
+  chat:'pm_chat_v1'
 };
 
 const PHASE_META = {
   base:{name:'Base Building', desc:'Rebuilding running consistency and aerobic engine.'},
-  halfbuild:{name:'Half Marathon Build', desc:'Sharpening toward Copenhagen.'},
-  recovery:{name:'Recovery', desc:'Easy running only — absorb the half marathon.'},
-  marathonbase:{name:'Marathon Base', desc:'Rebuilding volume and endurance for London.'},
+  halfbuild:{name:'Half Marathon Build', desc:'Sharpening toward your target event.'},
+  recovery:{name:'Recovery', desc:'Easy running only — absorb the event.'},
+  marathonbase:{name:'Marathon Base', desc:'Rebuilding volume and endurance.'},
   marathonbuild:{name:'Marathon Build', desc:'Peak long runs and marathon-pace work.'},
   taper:{name:'Taper', desc:'Sharpen, rest, and arrive fresh.'},
   done:{name:'Race Complete', desc:'Well done.'}
@@ -79,39 +76,6 @@ const STANDARD_EVENT_DISTANCES = {
   'marathon': 42.195
 };
 
-function defaultEvents(){
-  return [
-    {
-      id: 'evt_cph',
-      name: 'Copenhagen Half Marathon',
-      date: '2026-09-20',
-      type: 'race',
-      distanceType: 'half',
-      distanceKm: STANDARD_EVENT_DISTANCES.half,
-      goalSeconds: 2 * 3600,
-      priority: 'B',
-      notes: '',
-      status: 'planned'
-    },
-    {
-      id: 'evt_ldn',
-      name: 'TCS London Marathon',
-      date: '2027-04-25',
-      type: 'race',
-      distanceType: 'marathon',
-      distanceKm: STANDARD_EVENT_DISTANCES.marathon,
-      goalSeconds: 4 * 3600,
-      priority: 'A',
-      notes: '',
-      status: 'planned'
-    }
-  ];
-}
-
-function saveEvents(){
-  saveLocal(KEYS.events, events);
-}
-
 function eventDistanceKm(event){
   if(!event) return null;
   if(event.distanceType === 'custom') return Number(event.distanceKm) || null;
@@ -141,14 +105,6 @@ function loadLocal(key){
   return raw ? JSON.parse(raw) : null;
 }
 
-function saveProfile(){
-  saveLocal(KEYS.profile, profile);
-}
-
-function saveSessions(){
-  saveLocal(KEYS.sessions, sessions);
-}
-
 function saveAdaptations(){
   saveLocal(KEYS.adaptations, adaptations);
 }
@@ -165,26 +121,10 @@ function escapeHtml(str){
     .replace(/"/g,'&quot;')
     .replace(/'/g,'&#39;');
 }
-function normaliseEventFromApi(row){
-  return {
-    id: row.id,
-    userId: row.user_id,
-    name: row.name,
-    date: typeof row.date === 'string' ? row.date.slice(0,10) : row.date,
-    type: row.type,
-    distanceType: row.distance_type,
-    distanceKm: row.distance_km !== null ? Number(row.distance_km) : null,
-    goalSeconds: row.goal_seconds !== null ? Number(row.goal_seconds) : null,
-    priority: row.priority,
-    notes: row.notes || '',
-    status: row.status || 'planned',
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
-}
+
 function loadAllState(){
   profile = {...DEFAULT_PROFILE};
-  sessions = loadLocal(KEYS.sessions) || [];
+  sessions = [];
   adaptations = loadLocal(KEYS.adaptations) || {};
   chatHistory = loadLocal(KEYS.chat) || [];
   events = [];
@@ -222,14 +162,33 @@ async function saveProfileToApi(profilePayload){
     body: JSON.stringify(profilePayload)
   });
 
+  const data = await res.json().catch(() => null);
+
   if(!res.ok){
-    const data = await res.json().catch(() => null);
     throw new Error(data && data.error ? data.error : 'Failed to save profile');
   }
 
-  const data = await res.json();
   return normaliseProfileFromApi(data);
 }
+
+function normaliseEventFromApi(row){
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    date: typeof row.date === 'string' ? row.date.slice(0,10) : row.date,
+    type: row.type,
+    distanceType: row.distance_type,
+    distanceKm: row.distance_km !== null ? Number(row.distance_km) : null,
+    goalSeconds: row.goal_seconds !== null ? Number(row.goal_seconds) : null,
+    priority: row.priority,
+    notes: row.notes || '',
+    status: row.status || 'planned',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
 async function fetchEventsFromApi(){
   const res = await fetch('/api/events');
   if(!res.ok){
@@ -247,11 +206,12 @@ async function createEventInApi(event){
     body: JSON.stringify(event)
   });
 
+  const data = await res.json().catch(() => null);
+
   if(!res.ok){
-    throw new Error('Failed to create event');
+    throw new Error(data && data.error ? data.error : 'Failed to create event');
   }
 
-  const data = await res.json();
   return normaliseEventFromApi(data);
 }
 
@@ -262,11 +222,12 @@ async function updateEventInApi(eventId, event){
     body: JSON.stringify(event)
   });
 
+  const data = await res.json().catch(() => null);
+
   if(!res.ok){
-    throw new Error('Failed to update event');
+    throw new Error(data && data.error ? data.error : 'Failed to update event');
   }
 
-  const data = await res.json();
   return normaliseEventFromApi(data);
 }
 
@@ -275,9 +236,69 @@ async function deleteEventInApi(eventId){
     method:'DELETE'
   });
 
+  const data = await res.json().catch(() => null);
+
   if(!res.ok){
-    throw new Error('Failed to delete event');
+    throw new Error(data && data.error ? data.error : 'Failed to delete event');
   }
 
-  return await res.json();
+  return data;
+}
+
+function normaliseSessionFromApi(row){
+  return {
+    id: row.id,
+    userId: row.user_id,
+    date: typeof row.date === 'string' ? row.date.slice(0,10) : row.date,
+    role: row.role,
+    completed: !!row.completed,
+    distanceKm: row.distance_km !== null ? Number(row.distance_km) : null,
+    durationSec: row.duration_sec !== null ? Number(row.duration_sec) : null,
+    rpe: row.rpe !== null ? Number(row.rpe) : null,
+    notes: row.notes || null,
+    strengthFocusText: row.strength_focus_text || null,
+    exercises: Array.isArray(row.exercises_json) ? row.exercises_json : (row.exercises_json || []),
+    mobility: row.mobility || null,
+    createdAt: row.created_at
+  };
+}
+
+async function fetchSessionsFromApi(){
+  const res = await fetch('/api/sessions');
+  if(!res.ok){
+    throw new Error('Failed to fetch sessions');
+  }
+
+  const data = await res.json();
+  return Array.isArray(data) ? data.map(normaliseSessionFromApi) : [];
+}
+
+async function createSessionInApi(sessionPayload){
+  const res = await fetch('/api/sessions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(sessionPayload)
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if(!res.ok){
+    throw new Error(data && data.error ? data.error : 'Failed to create session');
+  }
+
+  return normaliseSessionFromApi(data);
+}
+
+async function deleteSessionInApi(sessionId){
+  const res = await fetch(`/api/sessions/${sessionId}`, {
+    method:'DELETE'
+  });
+
+  const data = await res.json().catch(() => null);
+
+  if(!res.ok){
+    throw new Error(data && data.error ? data.error : 'Failed to delete session');
+  }
+
+  return data;
 }
