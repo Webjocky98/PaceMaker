@@ -24,11 +24,11 @@ function showEffortPicker(){
     </div>`;
 }
 
-function quickLog(dateISO, completed, rpe){
+async function quickLog(dateISO, completed, rpe){
   const plan = fullDayPlan(toDate(dateISO));
   const run = plan.run;
 
-  sessions.push({
+  const sessionPayload = {
     date: dateISO,
     role: run.role,
     completed,
@@ -36,10 +36,16 @@ function quickLog(dateISO, completed, rpe){
     durationSec: run.km ? Math.round(run.km * (paceZones().easy || 360)) : null,
     rpe: rpe,
     notes: null
-  });
+  };
 
-  saveSessions();
-  render();
+  try{
+    const created = await createSessionInApi(sessionPayload);
+    sessions.push(created);
+    render();
+  }catch(err){
+    console.error('Failed to quick log session:', err);
+    alert(err.message || 'Failed to save session.');
+  }
 }
 
 function selectRpe(n){
@@ -148,7 +154,7 @@ function openLogModal(dateISO){
   toggleLogFieldsByRole();
 }
 
-function submitLog(completed){
+async function submitLog(completed){
   const role = document.getElementById('logRole').value;
   const notes = document.getElementById('logNotes').value.trim();
 
@@ -171,19 +177,34 @@ function submitLog(completed){
     const km = parseFloat(document.getElementById('logKm').value) || 0;
     const min = parseFloat(document.getElementById('logMin').value) || 0;
     entry.distanceKm = km || null;
-    entry.durationSec = min ? min*60 : null;
+    entry.durationSec = min ? min * 60 : null;
   }
 
-  sessions.push(entry);
-  saveSessions();
-  closeModal('logOverlay');
-  render();
+  try{
+    const created = await createSessionInApi(entry);
+    sessions.push(created);
+    closeModal('logOverlay');
+    render();
+  }catch(err){
+    console.error('Failed to submit session log:', err);
+    alert(err.message || 'Failed to save session.');
+  }
 }
 
 async function deleteSession(i){
-  sessions.splice(i,1);
-  saveSessions();
-  render();
+  const session = sessions[i];
+  if(!session) return;
+
+  try{
+    if(session.id){
+      await deleteSessionInApi(session.id);
+    }
+    sessions.splice(i,1);
+    render();
+  }catch(err){
+    console.error('Failed to delete session:', err);
+    alert(err.message || 'Failed to delete session.');
+  }
 }
 
 function parseHMS(str){
@@ -293,6 +314,7 @@ async function saveSettings(){
     alert(err.message || 'Failed to save settings.');
   }
 }
+
 function findEventById(id){
   return events.find(e => String(e.id) === String(id)) || null;
 }
@@ -348,7 +370,7 @@ function openEventEditor(eventId){
 
     <div class="btn-row">
       <button class="btn" onclick="saveEvent('${existing ? existing.id : ''}')">Save event</button>
-      ${existing ? `<button class="btn secondary" onclick="deleteEvent('${existing.id}')">Delete</button>` : ''}
+      ${existing ? `<button class="btn secondary" onclick="confirmDeleteEvent('${existing.id}')">Delete</button>` : ''}
     </div>
   `;
 
@@ -403,7 +425,7 @@ async function saveEvent(eventId){
     render();
   }catch(err){
     console.error('Failed to save event:', err);
-    alert('Failed to save event.');
+    alert(err.message || 'Failed to save event.');
   }
 }
 
@@ -415,9 +437,10 @@ async function deleteEvent(eventId){
     render();
   }catch(err){
     console.error('Failed to delete event:', err);
-    alert('Failed to delete event.');
+    alert(err.message || 'Failed to delete event.');
   }
 }
+
 function confirmDeleteEvent(eventId){
   const event = findEventById(eventId);
   const name = event ? event.name : 'this event';
@@ -427,6 +450,7 @@ function confirmDeleteEvent(eventId){
 
   deleteEvent(eventId);
 }
+
 function openEventModal(eventId){
   const event = findEventById(eventId);
   if(!event) return;
@@ -455,6 +479,7 @@ function openEventModal(eventId){
 
   openModal('eventOverlay');
 }
+
 function openSessionDetails(dateISO){
   const d = toDate(dateISO);
   const plan = fullDayPlan(d);
@@ -506,6 +531,7 @@ function openSessionDetails(dateISO){
 
   openModal('sessionOverlay');
 }
+
 function sessionExtraDetail(run){
   if(!run) return '';
 
