@@ -18,6 +18,13 @@ async function initialiseAppState(){
     events = [];
   }
 
+  try{
+    sessions = await fetchSessionsFromApi();
+  }catch(err){
+    console.error('Failed to load sessions from API:', err);
+    sessions = [];
+  }
+
   const changed = runAdaptationIfNeeded();
   if(changed){
     try{
