@@ -1,24 +1,15 @@
-INSERT INTO profiles (
-  user_id,
-  start_date,
-  prior_marathon_seconds,
-  training_days,
-  strength_days,
-  dietary_pref,
-  training_time_of_day,
-  load_multiplier,
-  last_adapted_week_key,
-  strength_focus
-)
-VALUES (
-  1,
-  CURRENT_DATE,
-  17880,
-  '[2,4,6,0]',
-  '[1,5]',
-  'none',
-  'morning',
-  1.0,
-  NULL,
-  'balanced'
+CREATE TABLE sessions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  role TEXT NOT NULL,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  distance_km NUMERIC(6,2),
+  duration_sec INTEGER,
+  rpe INTEGER,
+  notes TEXT,
+  strength_focus_text TEXT,
+  exercises_json JSONB,
+  mobility TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
