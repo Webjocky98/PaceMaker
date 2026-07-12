@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const pool = require('./db/db');
 const eventsRouter = require('./routes/events');
 const profileRouter = require('./routes/profile');
+const sessionsRouter = require('./routes/sessions');
 
 dotenv.config();
 
@@ -18,8 +19,9 @@ console.log('Serving static files from:', clientPath);
 app.use(express.static(clientPath));
 
 app.use('/api/events', eventsRouter);
-
 app.use('/api/profile', profileRouter);
+app.use('/api/sessions', sessionsRouter);
+
 
 app.get('/api/health', async (req, res) => {
   try {
